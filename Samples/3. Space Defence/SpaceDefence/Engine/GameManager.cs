@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Reflection.Metadata;
-using System.Runtime.CompilerServices;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
-using Microsoft.Xna.Framework.Input;
 
 namespace SpaceDefence
 {
@@ -13,22 +10,34 @@ namespace SpaceDefence
     {
         private static GameManager gameManager;
 
-        private List<GameObject> _gameObjects;
-        private List<GameObject> _toBeRemoved;
-        private List<GameObject> _toBeAdded;
+        private readonly List<GameObject> _gameObjects;
+        private readonly List<GameObject> _toBeRemoved;
+        private readonly List<GameObject> _toBeAdded;
         private ContentManager _content;
+        private Texture2D _backgroundTexture;
+        private float _enemySpawnTimer;
+        private float _enemySpawnInterval;
+        private float _nextAlienSpeed;
+        private bool _contentLoaded;
 
         public Random RNG { get; private set; }
         public Ship Player { get; private set; }
         public InputManager InputManager { get; private set; }
         public Game Game { get; private set; }
+        public Camera Camera { get; private set; }
+        public Rectangle WorldBounds { get; private set; }
+        public int Score { get; private set; }
+        public bool GameOverRequested { get; private set; }
+        public Texture2D Pixel { get; private set; }
+        public ContentManager Content => _content;
 
         public static GameManager GetGameManager()
         {
-            if(gameManager == null)
+            if (gameManager == null)
                 gameManager = new GameManager();
             return gameManager;
         }
+
         public GameManager()
         {
             _gameObjects = new List<GameObject>();
@@ -36,6 +45,8 @@ namespace SpaceDefence
             _toBeAdded = new List<GameObject>();
             InputManager = new InputManager();
             RNG = new Random();
+            Camera = new Camera();
+            WorldBounds = new Rectangle(0, 0, 4800, 3200);
         }
 
         public void Initialize(ContentManager content, Game game, Ship player)
@@ -47,26 +58,61 @@ namespace SpaceDefence
 
         public void Load(ContentManager content)
         {
-            foreach (GameObject gameObject in _gameObjects)
+            _content = content;
+            _backgroundTexture = content.Load<Texture2D>("stars_texture");
+            Pixel = new Texture2D(Game.GraphicsDevice, 1, 1);
+            Pixel.SetData(new[] { Color.White });
+            _contentLoaded = true;
+            ApplyPendingChanges();
+        }
+
+        public void StartNewGame()
+        {
+            _gameObjects.Clear();
+            _toBeRemoved.Clear();
+            _toBeAdded.Clear();
+
+            Score = 0;
+            GameOverRequested = false;
+            _enemySpawnInterval = 6f;
+            _enemySpawnTimer = _enemySpawnInterval;
+            _nextAlienSpeed = 120f;
+
+            Point playerPosition = new Point(WorldBounds.Center.X, WorldBounds.Center.Y);
+            Player = new Ship(playerPosition);
+
+            AddGameObject(Player);
+            AddGameObject(new Planet(new Vector2(WorldBounds.Left + 650, WorldBounds.Center.Y - 350), "EarthPlanet", "Earth", true));
+            AddGameObject(new Planet(new Vector2(WorldBounds.Right - 650, WorldBounds.Center.Y + 350), "AlienPlanet", "Outpost", false));
+            AddGameObject(new Supply());
+            AddGameObject(new Supply(WeaponPickupType.Lightning));
+
+            for (int i = 0; i < 5; i++)
             {
-                gameObject.Load(content);
+                AddGameObject(new Asteroid(FindOpenWorldLocation(200f, Player.GetPosition().Center.ToVector2(), 550f)));
             }
+
+            SpawnAlien(_nextAlienSpeed);
+
+            if (_contentLoaded)
+                ApplyPendingChanges();
+
+            UpdateCamera();
         }
 
         public void HandleInput(InputManager inputManager)
         {
             foreach (GameObject gameObject in _gameObjects)
             {
-                gameObject.HandleInput(this.InputManager);
+                gameObject.HandleInput(inputManager);
             }
         }
 
         public void CheckCollision()
         {
-            // Checks once for every pair of 2 GameObjects if the collide.
             for (int i = 0; i < _gameObjects.Count; i++)
             {
-                for (int j = i+1; j < _gameObjects.Count; j++)
+                for (int j = i + 1; j < _gameObjects.Count; j++)
                 {
                     if (_gameObjects[i].CheckCollision(_gameObjects[j]))
                     {
@@ -75,31 +121,185 @@ namespace SpaceDefence
                     }
                 }
             }
-            
         }
-        
-        public void Update(GameTime gameTime) 
-        {
-            InputManager.Update();
 
-            // Handle input
+        public void Update(GameTime gameTime)
+        {
+            ApplyPendingChanges();
             HandleInput(InputManager);
 
-
-            // Update
             foreach (GameObject gameObject in _gameObjects)
             {
                 gameObject.Update(gameTime);
             }
 
-            // Check Collission
             CheckCollision();
+            UpdateEnemySpawning((float)gameTime.ElapsedGameTime.TotalSeconds);
+            ApplyPendingChanges();
+            UpdateCamera();
+        }
 
-            foreach (GameObject gameObject in _toBeAdded)
+        public void UpdateEffects(GameTime gameTime)
+        {
+            foreach (GameObject gameObject in _gameObjects)
             {
-                gameObject.Load(_content);
-                _gameObjects.Add(gameObject);
+                if (gameObject is Explosion || gameObject is LightningStrike)
+                    gameObject.Update(gameTime);
             }
+
+            ApplyPendingChanges();
+        }
+
+        public void Draw(GameTime gameTime, SpriteBatch spriteBatch)
+        {
+            spriteBatch.Begin(transformMatrix: Camera.Transform);
+            DrawBackground(spriteBatch);
+
+            foreach (GameObject gameObject in _gameObjects)
+            {
+                gameObject.Draw(gameTime, spriteBatch);
+            }
+
+            spriteBatch.End();
+        }
+
+        public void AddGameObject(GameObject gameObject)
+        {
+            if (_gameObjects.Contains(gameObject) || _toBeAdded.Contains(gameObject))
+                return;
+
+            _toBeAdded.Add(gameObject);
+        }
+
+        public void RemoveGameObject(GameObject gameObject)
+        {
+            if (_toBeRemoved.Contains(gameObject))
+                return;
+
+            _toBeRemoved.Add(gameObject);
+        }
+
+        public List<GameObject> GetGameObjects()
+        {
+            return _gameObjects;
+        }
+
+        public void AddScore(int amount)
+        {
+            Score += amount;
+        }
+
+        public Vector2 RandomScreenLocation()
+        {
+            return RandomWorldLocation();
+        }
+
+        public Vector2 RandomWorldLocation(float margin = 120f)
+        {
+            int left = WorldBounds.Left + (int)margin;
+            int right = WorldBounds.Right - (int)margin;
+            int top = WorldBounds.Top + (int)margin;
+            int bottom = WorldBounds.Bottom - (int)margin;
+
+            return new Vector2(
+                RNG.Next(left, right),
+                RNG.Next(top, bottom));
+        }
+
+        public Vector2 FindOpenWorldLocation(float margin, Vector2 avoidPoint, float clearance)
+        {
+            Vector2 earthPosition = new Vector2(WorldBounds.Left + 650, WorldBounds.Center.Y - 350);
+            Vector2 outpostPosition = new Vector2(WorldBounds.Right - 650, WorldBounds.Center.Y + 350);
+
+            for (int i = 0; i < 50; i++)
+            {
+                Vector2 candidate = RandomWorldLocation(margin);
+                if (Vector2.Distance(candidate, avoidPoint) < clearance)
+                    continue;
+                if (Vector2.Distance(candidate, earthPosition) < 300f)
+                    continue;
+                if (Vector2.Distance(candidate, outpostPosition) < 300f)
+                    continue;
+
+                return candidate;
+            }
+
+            return RandomWorldLocation(margin);
+        }
+
+        public Rectangle ClampToWorld(Rectangle rectangle)
+        {
+            int x = Math.Clamp(rectangle.X, WorldBounds.Left, WorldBounds.Right - rectangle.Width);
+            int y = Math.Clamp(rectangle.Y, WorldBounds.Top, WorldBounds.Bottom - rectangle.Height);
+            return new Rectangle(x, y, rectangle.Width, rectangle.Height);
+        }
+
+        public bool IsInsideWorld(Vector2 position, float margin = 0f)
+        {
+            return position.X >= WorldBounds.Left - margin
+                && position.X <= WorldBounds.Right + margin
+                && position.Y >= WorldBounds.Top - margin
+                && position.Y <= WorldBounds.Bottom + margin;
+        }
+
+        public Vector2 ScreenToWorld(Vector2 screenPosition)
+        {
+            return Camera.ScreenToWorld(screenPosition);
+        }
+
+        public void SpawnExplosion(Vector2 position, float scale = 1f)
+        {
+            AddGameObject(new Explosion(position, scale));
+        }
+
+        public void NotifyAlienDestroyed(float alienSpeed)
+        {
+            _nextAlienSpeed = Math.Max(_nextAlienSpeed, alienSpeed + 12f);
+
+            if (!GameOverRequested)
+                SpawnAlien(_nextAlienSpeed);
+        }
+
+        public void TriggerGameOver()
+        {
+            GameOverRequested = true;
+        }
+
+        private void SpawnAlien(float speed)
+        {
+            if (Player == null)
+                return;
+
+            Vector2 spawnPosition = FindOpenWorldLocation(200f, Player.GetPosition().Center.ToVector2(), 700f);
+            AddGameObject(new Alien(spawnPosition, speed));
+        }
+
+        private void UpdateEnemySpawning(float elapsedSeconds)
+        {
+            if (GameOverRequested || Player == null)
+                return;
+
+            _enemySpawnTimer -= elapsedSeconds;
+            if (_enemySpawnTimer > 0)
+                return;
+
+            _nextAlienSpeed += 5f;
+            SpawnAlien(_nextAlienSpeed);
+            _enemySpawnInterval = Math.Max(2.5f, _enemySpawnInterval - 0.2f);
+            _enemySpawnTimer = _enemySpawnInterval;
+        }
+
+        private void ApplyPendingChanges()
+        {
+            if (_contentLoaded)
+            {
+                foreach (GameObject gameObject in _toBeAdded)
+                {
+                    gameObject.Load(_content);
+                    _gameObjects.Add(gameObject);
+                }
+            }
+
             _toBeAdded.Clear();
 
             foreach (GameObject gameObject in _toBeRemoved)
@@ -107,49 +307,30 @@ namespace SpaceDefence
                 gameObject.Destroy();
                 _gameObjects.Remove(gameObject);
             }
+
             _toBeRemoved.Clear();
         }
 
-        public void Draw(GameTime gameTime, SpriteBatch spriteBatch) 
+        private void UpdateCamera()
         {
-            spriteBatch.Begin();
-            foreach (GameObject gameObject in _gameObjects)
+            if (Player == null || Game == null)
+                return;
+
+            Camera.Follow(Player.GetPosition(), Game.GraphicsDevice.Viewport, WorldBounds);
+        }
+
+        private void DrawBackground(SpriteBatch spriteBatch)
+        {
+            if (_backgroundTexture == null)
+                return;
+
+            for (int x = WorldBounds.Left; x < WorldBounds.Right; x += _backgroundTexture.Width)
             {
-                gameObject.Draw(gameTime, spriteBatch);
+                for (int y = WorldBounds.Top; y < WorldBounds.Bottom; y += _backgroundTexture.Height)
+                {
+                    spriteBatch.Draw(_backgroundTexture, new Vector2(x, y), Color.White);
+                }
             }
-            spriteBatch.End();
-        }
-
-        /// <summary>
-        /// Add a new GameObject to the GameManager. 
-        /// The GameObject will be added at the start of the next Update step. 
-        /// Once it is added, the GameManager will ensure all steps of the game loop will be called on the object automatically. 
-        /// </summary>
-        /// <param name="gameObject"> The GameObject to add. </param>
-        public void AddGameObject(GameObject gameObject)
-        {
-            _toBeAdded.Add(gameObject);
-        }
-
-        /// <summary>
-        /// Remove GameObject from the GameManager. 
-        /// The GameObject will be removed at the start of the next Update step and its Destroy() mehtod will be called.
-        /// After that the object will no longer receive any updates.
-        /// </summary>
-        /// <param name="gameObject"> The GameObject to Remove. </param>
-        public void RemoveGameObject(GameObject gameObject)
-        {
-            _toBeRemoved.Add(gameObject);
-        }
-
-        /// <summary>
-        /// Get a random location on the screen.
-        /// </summary>
-        public Vector2 RandomScreenLocation()
-        {
-            return new Vector2(
-                RNG.Next(0, Game.GraphicsDevice.Viewport.Width),
-                RNG.Next(0, Game.GraphicsDevice.Viewport.Height));
         }
     }
 }

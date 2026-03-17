@@ -1,5 +1,4 @@
-﻿using System;
-using Microsoft.Xna.Framework;
+﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -8,15 +7,21 @@ namespace SpaceDefence
     public class Bullet : GameObject
     {
         private Texture2D _texture;
-        private CircleCollider _circleCollider;
-        private Vector2 _velocity;
-        public float bulletSize = 4;
+        private readonly CircleCollider _circleCollider;
+        private readonly Vector2 _velocity;
 
-        public Bullet(Vector2 location, Vector2 direction, float speed)
+        public float Damage { get; }
+
+        public Bullet(Vector2 location, Vector2 direction, float speed) : this(location, direction, speed, 1f)
         {
-            _circleCollider = new CircleCollider(location, bulletSize);
+        }
+
+        public Bullet(Vector2 location, Vector2 direction, float speed, float damage)
+        {
+            _circleCollider = new CircleCollider(location, 4);
             SetCollider(_circleCollider);
             _velocity = direction * speed;
+            Damage = damage;
         }
 
         public override void Load(ContentManager content)
@@ -27,16 +32,21 @@ namespace SpaceDefence
 
         public override void Update(GameTime gameTime)
         {
-            base.Update(gameTime);
             _circleCollider.Center += _velocity * (float)gameTime.ElapsedGameTime.TotalSeconds;
-            if (!GameManager.GetGameManager().Game.GraphicsDevice.Viewport.Bounds.Contains(_circleCollider.Center))
-                 GameManager.GetGameManager().RemoveGameObject(this);
+            if (!GameManager.GetGameManager().IsInsideWorld(_circleCollider.Center, 20f))
+                GameManager.GetGameManager().RemoveGameObject(this);
 
+            base.Update(gameTime);
         }
 
         public override void OnCollision(GameObject other)
         {
-            if (other is Alien || other is Supply)
+            if (other is Alien alien)
+            {
+                alien.TakeDamage(Damage);
+                GameManager.GetGameManager().RemoveGameObject(this);
+            }
+            else if (other is Supply || other is Asteroid)
             {
                 GameManager.GetGameManager().RemoveGameObject(this);
             }

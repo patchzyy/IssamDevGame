@@ -1,4 +1,5 @@
-﻿using Microsoft.Xna.Framework;
+﻿using System.Collections.Generic;
+using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
 using Microsoft.Xna.Framework.Graphics;
 
@@ -6,39 +7,60 @@ namespace SpaceDefence
 {
     public class Laser : GameObject
     {
-        private LinePieceCollider linePiece;
+        private readonly HashSet<GameObject> _hitObjects;
+        private readonly LinePieceCollider linePiece;
         private Texture2D sprite;
-        private double lifespan = .25f;
+        private double lifespan = 0.15f;
 
-        public Laser(LinePieceCollider linePiece)
+        public float Damage { get; }
+
+        public Laser(LinePieceCollider linePiece) : this(linePiece, linePiece.Length, 3f)
+        {
+        }
+
+        public Laser(LinePieceCollider linePiece, float length) : this(linePiece, length, 3f)
+        {
+        }
+
+        public Laser(LinePieceCollider linePiece, float length, float damage)
         {
             this.linePiece = linePiece;
-            SetCollider(linePiece);
-        }
-        public Laser(LinePieceCollider linePiece, float length) : this(linePiece)
-        {
-            // Sets the length of the laser to be equal to the width of the screen, so it will always cover the full screen.
             this.linePiece.Length = length;
+            Damage = damage;
+            _hitObjects = new HashSet<GameObject>();
+            SetCollider(this.linePiece);
         }
 
         public override void Load(ContentManager content)
         {
-            base.Load(content);
             sprite = content.Load<Texture2D>("Laser");
+            base.Load(content);
         }
 
         public override void Update(GameTime gameTime)
         {
-            base.Update(gameTime);
-            if (lifespan < 0)
-                GameManager.GetGameManager().RemoveGameObject(this);
             lifespan -= gameTime.ElapsedGameTime.TotalSeconds;
+            if (lifespan <= 0)
+                GameManager.GetGameManager().RemoveGameObject(this);
+
+            base.Update(gameTime);
+        }
+
+        public override void OnCollision(GameObject other)
+        {
+            if (_hitObjects.Contains(other))
+                return;
+
+            _hitObjects.Add(other);
+
+            if (other is Alien alien)
+                alien.TakeDamage(Damage);
         }
 
         public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
         {
             Rectangle target = new Rectangle((int)linePiece.Start.X, (int)linePiece.Start.Y, sprite.Width, (int)linePiece.Length);
-            spriteBatch.Draw(sprite, target, null,Color.White, linePiece.GetAngle(), new Vector2(sprite.Width/2f,sprite.Height),SpriteEffects.None,1 );
+            spriteBatch.Draw(sprite, target, null, Color.White, linePiece.GetAngle(), new Vector2(sprite.Width / 2f, sprite.Height), SpriteEffects.None, 0);
             base.Draw(gameTime, spriteBatch);
         }
     }
