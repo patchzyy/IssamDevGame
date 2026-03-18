@@ -20,7 +20,7 @@ namespace SpaceDefence
         public override void Load(ContentManager content)
         {
             _texture = content.Load<Texture2D>("Explosion");
-            _animation = new SpriteSheetAnimation(_texture, 64, 64, _texture.Width / 64, 0.03f, false);
+            _animation = new(_texture, 64, 64, _texture.Width / 64, 0.03f, false);
             base.Load(content);
         }
 
@@ -35,8 +35,8 @@ namespace SpaceDefence
 
         public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
         {
-            Rectangle source = _animation.GetSourceRectangle();
-            Rectangle destination = new Rectangle((int)(_position.X - source.Width * _scale / 2f), (int)(_position.Y - source.Height * _scale / 2f), (int)(source.Width * _scale), (int)(source.Height * _scale));
+            var source = _animation.GetSourceRectangle();
+            var destination = new Rectangle((int)(_position.X - source.Width * _scale / 2f), (int)(_position.Y - source.Height * _scale / 2f), (int)(source.Width * _scale), (int)(source.Height * _scale));
             spriteBatch.Draw(_texture, destination, source, Color.White);
             base.Draw(gameTime, spriteBatch);
         }

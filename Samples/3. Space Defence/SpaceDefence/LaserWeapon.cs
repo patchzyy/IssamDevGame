@@ -12,8 +12,8 @@ namespace SpaceDefence
 
         protected override void Fire(Vector2 targetPosition)
         {
-            Vector2 direction = GetAimDirection(targetPosition);
-            Vector2 turretExit = GetTurretExit(targetPosition);
+            var direction = GetAimDirection(targetPosition);
+            var turretExit = GetTurretExit(targetPosition);
             GameManager.GetGameManager().AddGameObject(new Laser(new LinePieceCollider(turretExit, direction, 900f), 900f, 3f));
         }
     }

@@ -91,7 +91,7 @@ namespace SpaceDefence
         /// <returns> A Vector2 containing the direction from point1 to point2. </returns>
         public static Vector2 GetDirection(Vector2 point1, Vector2 point2)
         {
-            Vector2 direction = point2 - point1;
+            var direction = (point2 - point1);
             if (direction.LengthSquared() <= Epsilon)
                 return -Vector2.UnitY;
 
@@ -107,24 +107,25 @@ namespace SpaceDefence
         /// <returns>true there is any overlap between the Circle and the Line.</returns>
         public override bool Intersects(LinePieceCollider other)
         {
-            Vector2 firstLine = End - Start;
-            Vector2 secondLine = other.End - other.Start;
-            float divisor = Cross(firstLine, secondLine);
-            Vector2 difference = other.Start - Start;
+            var firstLine = End - Start;
+            var secondLine = other.End - other.Start;
+            var divisor = Cross(firstLine, secondLine);
+            var difference = other.Start - Start;
 
             if (Math.Abs(divisor) <= Epsilon)
             {
                 if (Math.Abs(Cross(difference, firstLine)) > Epsilon)
                     return false;
 
+                // boem groot
                 return PointOnSegment(other.Start, Start, End)
                     || PointOnSegment(other.End, Start, End)
                     || PointOnSegment(Start, other.Start, other.End)
                     || PointOnSegment(End, other.Start, other.End);
             }
 
-            float startDistance = Cross(difference, secondLine) / divisor;
-            float otherDistance = Cross(difference, firstLine) / divisor;
+            var startDistance = Cross(difference, secondLine) / divisor;
+            var otherDistance = Cross(difference, firstLine) / divisor;
 
             return startDistance >= 0 && startDistance <= 1 && otherDistance >= 0 && otherDistance <= 1;
         }
@@ -137,7 +138,7 @@ namespace SpaceDefence
         /// <returns>true there is any overlap between the two Circles.</returns>
         public override bool Intersects(CircleCollider other)
         {
-            Vector2 nearestPoint = NearestPointOnLine(other.Center);
+            var nearestPoint = NearestPointOnLine(other.Center);
             return Vector2.DistanceSquared(nearestPoint, other.Center) <= other.Radius * other.Radius;
         }
 
@@ -151,11 +152,11 @@ namespace SpaceDefence
             if (other.Contains(Start) || other.Contains(End))
                 return true;
 
-            Rectangle rectangle = other.shape;
-            Vector2 topLeft = new Vector2(rectangle.Left, rectangle.Top);
-            Vector2 topRight = new Vector2(rectangle.Right, rectangle.Top);
-            Vector2 bottomLeft = new Vector2(rectangle.Left, rectangle.Bottom);
-            Vector2 bottomRight = new Vector2(rectangle.Right, rectangle.Bottom);
+            var rectangle = other.shape;
+            var topLeft = new Vector2(rectangle.Left, rectangle.Top);
+            var topRight = new Vector2(rectangle.Right, rectangle.Top);
+            var bottomLeft = new Vector2(rectangle.Left, rectangle.Bottom);
+            var bottomRight = new Vector2(rectangle.Right, rectangle.Bottom);
 
             return Intersects(new LinePieceCollider(topLeft, topRight))
                 || Intersects(new LinePieceCollider(topRight, bottomRight))
@@ -170,12 +171,12 @@ namespace SpaceDefence
         /// <returns>A Vector2 with the point of intersection.</returns>
         public Vector2 GetIntersection(LinePieceCollider Other)
         {
-            float divisor = Cross(End - Start, Other.End - Other.Start);
+            var divisor = Cross(End - Start, Other.End - Other.Start);
             if (Math.Abs(divisor) <= Epsilon)
                 return Vector2.Zero;
 
-            Vector2 difference = Other.Start - Start;
-            float distance = Cross(difference, Other.End - Other.Start) / divisor;
+            var difference = Other.Start - Start;
+            var distance = Cross(difference, Other.End - Other.Start) / divisor;
             return Start + (End - Start) * distance;
         }
 
@@ -186,12 +187,12 @@ namespace SpaceDefence
         /// <returns>The nearest point on the line.</returns>
         public Vector2 NearestPointOnLine(Vector2 other)
         {
-            Vector2 line = End - Start;
-            float lineLengthSquared = line.LengthSquared();
+            var line = End - Start;
+            var lineLengthSquared = line.LengthSquared();
             if (lineLengthSquared <= Epsilon)
                 return Start;
 
-            float progress = Vector2.Dot(other - Start, line) / lineLengthSquared;
+            var progress = Vector2.Dot(other - Start, line) / lineLengthSquared;
             progress = Math.Clamp(progress, 0, 1);
             return Start + line * progress;
         }
@@ -203,8 +204,8 @@ namespace SpaceDefence
         /// <returns></returns>
         public override Rectangle GetBoundingBox()
         {
-            Point topLeft = new Point((int)Math.Min(Start.X, End.X), (int)Math.Min(Start.Y, End.Y));
-            Point size = new Point((int)Math.Max(Start.X, End.X), (int)Math.Max(Start.Y, End.Y)) - topLeft;
+            var topLeft = new Point((int)Math.Min(Start.X, End.X), (int)Math.Min(Start.Y, End.Y));
+            var size = new Point((int)Math.Max(Start.X, End.X), (int)Math.Max(Start.Y, End.Y)) - topLeft;
             return new Rectangle(topLeft,size);
         }
 
@@ -216,7 +217,7 @@ namespace SpaceDefence
         /// <returns>true if the coordinates are within the circle.</returns>
         public override bool Contains(Vector2 coordinates)
         {
-            Vector2 nearestPoint = NearestPointOnLine(coordinates);
+            var nearestPoint = NearestPointOnLine(coordinates);
             return Vector2.DistanceSquared(nearestPoint, coordinates) <= 1f;
         }
 
@@ -265,10 +266,10 @@ namespace SpaceDefence
             if (Math.Abs(Cross(point - segmentStart, segmentEnd - segmentStart)) > Epsilon)
                 return false;
 
-            float minX = Math.Min(segmentStart.X, segmentEnd.X) - Epsilon;
-            float maxX = Math.Max(segmentStart.X, segmentEnd.X) + Epsilon;
-            float minY = Math.Min(segmentStart.Y, segmentEnd.Y) - Epsilon;
-            float maxY = Math.Max(segmentStart.Y, segmentEnd.Y) + Epsilon;
+            var minX = Math.Min(segmentStart.X, segmentEnd.X) - Epsilon;
+            var maxX = Math.Max(segmentStart.X, segmentEnd.X) + Epsilon;
+            var minY = Math.Min(segmentStart.Y, segmentEnd.Y) - Epsilon;
+            var maxY = Math.Max(segmentStart.Y, segmentEnd.Y) + Epsilon;
 
             return point.X >= minX && point.X <= maxX && point.Y >= minY && point.Y <= maxY;
         }

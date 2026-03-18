@@ -62,7 +62,7 @@ namespace SpaceDefence
         /// <returns>true there is any overlap between the two Circles.</returns>
         public override bool Intersects(CircleCollider other)
         {
-            float combinedRadius = Radius + other.Radius;
+            var combinedRadius = Radius + other.Radius;
             return Vector2.DistanceSquared(Center, other.Center) <= combinedRadius * combinedRadius;
         }
 
@@ -74,8 +74,8 @@ namespace SpaceDefence
         /// <returns>true there is any overlap between the Circle and the Rectangle.</returns>
         public override bool Intersects(RectangleCollider other)
         {
-            float nearestX = Math.Clamp(X, other.shape.Left, other.shape.Right);
-            float nearestY = Math.Clamp(Y, other.shape.Top, other.shape.Bottom);
+            var nearestX = Math.Clamp(X, other.shape.Left, other.shape.Right);
+            var nearestY = Math.Clamp(Y, other.shape.Top, other.shape.Bottom);
             return Vector2.DistanceSquared(Center, new Vector2(nearestX, nearestY)) <= Radius * Radius;
         }
         /// <summary>

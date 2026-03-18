@@ -12,11 +12,7 @@ namespace SpaceDefence
 
         public float Damage { get; }
 
-        public Bullet(Vector2 location, Vector2 direction, float speed) : this(location, direction, speed, 1f)
-        {
-        }
-
-        public Bullet(Vector2 location, Vector2 direction, float speed, float damage)
+        public Bullet(Vector2 location, Vector2 direction, float speed, float damage = 1f)
         {
             _circleCollider = new CircleCollider(location, 4);
             SetCollider(_circleCollider);

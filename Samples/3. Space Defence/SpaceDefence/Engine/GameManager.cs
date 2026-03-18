@@ -34,19 +34,19 @@ namespace SpaceDefence
         public static GameManager GetGameManager()
         {
             if (gameManager == null)
-                gameManager = new GameManager();
+                gameManager = new();
             return gameManager;
         }
 
         public GameManager()
         {
-            _gameObjects = new List<GameObject>();
-            _toBeRemoved = new List<GameObject>();
-            _toBeAdded = new List<GameObject>();
-            InputManager = new InputManager();
-            RNG = new Random();
-            Camera = new Camera();
-            WorldBounds = new Rectangle(0, 0, 4800, 3200);
+            _gameObjects = new();
+            _toBeRemoved = new();
+            _toBeAdded = new();
+            InputManager = new();
+            RNG = new();
+            Camera = new();
+            WorldBounds = new(0, 0, 4800, 3200);
         }
 
         public void Initialize(ContentManager content, Game game, Ship player)
@@ -60,8 +60,8 @@ namespace SpaceDefence
         {
             _content = content;
             _backgroundTexture = content.Load<Texture2D>("stars_texture");
-            Pixel = new Texture2D(Game.GraphicsDevice, 1, 1);
-            Pixel.SetData(new[] { Color.White });
+            Pixel = new(Game.GraphicsDevice, 1, 1);
+            Pixel.SetData([Color.White]);
             _contentLoaded = true;
             ApplyPendingChanges();
         }
@@ -78,16 +78,16 @@ namespace SpaceDefence
             _enemySpawnTimer = _enemySpawnInterval;
             _nextAlienSpeed = 120f;
 
-            Point playerPosition = new Point(WorldBounds.Center.X, WorldBounds.Center.Y);
-            Player = new Ship(playerPosition);
+            var playerPosition = new Point(WorldBounds.Center.X, WorldBounds.Center.Y);
+            Player = new(playerPosition);
 
             AddGameObject(Player);
-            AddGameObject(new Planet(new Vector2(WorldBounds.Left + 650, WorldBounds.Center.Y - 350), "EarthPlanet", "Earth", true));
-            AddGameObject(new Planet(new Vector2(WorldBounds.Right - 650, WorldBounds.Center.Y + 350), "AlienPlanet", "Outpost", false));
+            AddGameObject(new Planet(new(WorldBounds.Left + 650, WorldBounds.Center.Y - 350), "EarthPlanet", "Earth", true));
+            AddGameObject(new Planet(new(WorldBounds.Right - 650, WorldBounds.Center.Y + 350), "AlienPlanet", "Outpost", false));
             AddGameObject(new Supply());
             AddGameObject(new Supply(WeaponPickupType.Lightning));
 
-            for (int i = 0; i < 5; i++)
+            for (var i = 0; i < 5; i++)
             {
                 AddGameObject(new Asteroid(FindOpenWorldLocation(200f, Player.GetPosition().Center.ToVector2(), 550f)));
             }
@@ -102,7 +102,7 @@ namespace SpaceDefence
 
         public void HandleInput(InputManager inputManager)
         {
-            foreach (GameObject gameObject in _gameObjects)
+            foreach (var gameObject in _gameObjects)
             {
                 gameObject.HandleInput(inputManager);
             }
@@ -110,9 +110,9 @@ namespace SpaceDefence
 
         public void CheckCollision()
         {
-            for (int i = 0; i < _gameObjects.Count; i++)
+            for (var i = 0; i < _gameObjects.Count; i++)
             {
-                for (int j = i + 1; j < _gameObjects.Count; j++)
+                for (var j = i + 1; j < _gameObjects.Count; j++)
                 {
                     if (_gameObjects[i].CheckCollision(_gameObjects[j]))
                     {
@@ -128,7 +128,7 @@ namespace SpaceDefence
             ApplyPendingChanges();
             HandleInput(InputManager);
 
-            foreach (GameObject gameObject in _gameObjects)
+            foreach (var gameObject in _gameObjects)
             {
                 gameObject.Update(gameTime);
             }
@@ -141,7 +141,7 @@ namespace SpaceDefence
 
         public void UpdateEffects(GameTime gameTime)
         {
-            foreach (GameObject gameObject in _gameObjects)
+            foreach (var gameObject in _gameObjects)
             {
                 if (gameObject is Explosion || gameObject is LightningStrike)
                     gameObject.Update(gameTime);
@@ -155,7 +155,7 @@ namespace SpaceDefence
             spriteBatch.Begin(transformMatrix: Camera.Transform);
             DrawBackground(spriteBatch);
 
-            foreach (GameObject gameObject in _gameObjects)
+            foreach (var gameObject in _gameObjects)
             {
                 gameObject.Draw(gameTime, spriteBatch);
             }
@@ -196,24 +196,24 @@ namespace SpaceDefence
 
         public Vector2 RandomWorldLocation(float margin = 120f)
         {
-            int left = WorldBounds.Left + (int)margin;
-            int right = WorldBounds.Right - (int)margin;
-            int top = WorldBounds.Top + (int)margin;
-            int bottom = WorldBounds.Bottom - (int)margin;
+            var left = WorldBounds.Left + (int)margin;
+            var right = WorldBounds.Right - (int)margin;
+            var top = WorldBounds.Top + (int)margin;
+            var bottom = WorldBounds.Bottom - (int)margin;
 
-            return new Vector2(
+            return new(
                 RNG.Next(left, right),
                 RNG.Next(top, bottom));
         }
 
         public Vector2 FindOpenWorldLocation(float margin, Vector2 avoidPoint, float clearance)
         {
-            Vector2 earthPosition = new Vector2(WorldBounds.Left + 650, WorldBounds.Center.Y - 350);
-            Vector2 outpostPosition = new Vector2(WorldBounds.Right - 650, WorldBounds.Center.Y + 350);
+            var earthPosition = new Vector2(WorldBounds.Left + 650, WorldBounds.Center.Y - 350);
+            var outpostPosition = new Vector2(WorldBounds.Right - 650, WorldBounds.Center.Y + 350);
 
-            for (int i = 0; i < 50; i++)
+            for (var i = 0; i < 50; i++)
             {
-                Vector2 candidate = RandomWorldLocation(margin);
+                var candidate = RandomWorldLocation(margin);
                 if (Vector2.Distance(candidate, avoidPoint) < clearance)
                     continue;
                 if (Vector2.Distance(candidate, earthPosition) < 300f)
@@ -229,9 +229,9 @@ namespace SpaceDefence
 
         public Rectangle ClampToWorld(Rectangle rectangle)
         {
-            int x = Math.Clamp(rectangle.X, WorldBounds.Left, WorldBounds.Right - rectangle.Width);
-            int y = Math.Clamp(rectangle.Y, WorldBounds.Top, WorldBounds.Bottom - rectangle.Height);
-            return new Rectangle(x, y, rectangle.Width, rectangle.Height);
+            var x = Math.Clamp(rectangle.X, WorldBounds.Left, WorldBounds.Right - rectangle.Width);
+            var y = Math.Clamp(rectangle.Y, WorldBounds.Top, WorldBounds.Bottom - rectangle.Height);
+            return new(x, y, rectangle.Width, rectangle.Height);
         }
 
         public bool IsInsideWorld(Vector2 position, float margin = 0f)
@@ -270,7 +270,7 @@ namespace SpaceDefence
             if (Player == null)
                 return;
 
-            Vector2 spawnPosition = FindOpenWorldLocation(200f, Player.GetPosition().Center.ToVector2(), 700f);
+            var spawnPosition = FindOpenWorldLocation(200f, Player.GetPosition().Center.ToVector2(), 700f);
             AddGameObject(new Alien(spawnPosition, speed));
         }
 
@@ -293,7 +293,7 @@ namespace SpaceDefence
         {
             if (_contentLoaded)
             {
-                foreach (GameObject gameObject in _toBeAdded)
+                foreach (var gameObject in _toBeAdded)
                 {
                     gameObject.Load(_content);
                     _gameObjects.Add(gameObject);
@@ -302,7 +302,7 @@ namespace SpaceDefence
 
             _toBeAdded.Clear();
 
-            foreach (GameObject gameObject in _toBeRemoved)
+            foreach (var gameObject in _toBeRemoved)
             {
                 gameObject.Destroy();
                 _gameObjects.Remove(gameObject);
@@ -324,9 +324,9 @@ namespace SpaceDefence
             if (_backgroundTexture == null)
                 return;
 
-            for (int x = WorldBounds.Left; x < WorldBounds.Right; x += _backgroundTexture.Width)
+            for (var x = WorldBounds.Left; x < WorldBounds.Right; x += _backgroundTexture.Width)
             {
-                for (int y = WorldBounds.Top; y < WorldBounds.Bottom; y += _backgroundTexture.Height)
+                for (var y = WorldBounds.Top; y < WorldBounds.Bottom; y += _backgroundTexture.Height)
                 {
                     spriteBatch.Draw(_backgroundTexture, new Vector2(x, y), Color.White);
                 }

@@ -14,19 +14,7 @@ namespace SpaceDefence
         public float MaxHealth { get; } = 3f;
         public float Health { get; private set; } = 3f;
 
-        public Alien() : this(Vector2.Zero, GameManager.GetGameManager().RandomWorldLocation(), 120f)
-        {
-        }
-
-        public Alien(float speed) : this(GameManager.GetGameManager().RandomWorldLocation(), speed)
-        {
-        }
-
-        public Alien(Vector2 spawnPosition, float speed) : this(Vector2.Zero, spawnPosition, speed)
-        {
-        }
-
-        private Alien(Vector2 unused, Vector2 spawnPosition, float speed)
+        public Alien(Vector2 spawnPosition = default, float speed = 120f)
         {
             _circleCollider = new CircleCollider(spawnPosition, 24);
             SetCollider(_circleCollider);
@@ -44,11 +32,11 @@ namespace SpaceDefence
 
         public override void Update(GameTime gameTime)
         {
-            Ship player = GameManager.GetGameManager().Player;
+            var player = GameManager.GetGameManager().Player;
             if (player == null)
                 return;
 
-            Vector2 direction = player.GetPosition().Center.ToVector2() - _circleCollider.Center;
+            var direction = player.GetPosition().Center.ToVector2() - _circleCollider.Center;
             if (direction.LengthSquared() > 0.001f)
             {
                 direction.Normalize();
@@ -91,13 +79,13 @@ namespace SpaceDefence
 
         private void DrawHealthBar(SpriteBatch spriteBatch)
         {
-            Texture2D pixel = GameManager.GetGameManager().Pixel;
+            var pixel = GameManager.GetGameManager().Pixel;
             if (pixel == null)
                 return;
 
-            Rectangle bounds = _circleCollider.GetBoundingBox();
-            Rectangle barBackground = new Rectangle(bounds.X, bounds.Y - 14, bounds.Width, 6);
-            Rectangle barFill = new Rectangle(barBackground.X + 1, barBackground.Y + 1, (int)((barBackground.Width - 2) * (Health / MaxHealth)), barBackground.Height - 2);
+            var bounds = _circleCollider.GetBoundingBox();
+            var barBackground = new Rectangle(bounds.X, bounds.Y - 14, bounds.Width, 6);
+            var barFill = new Rectangle(barBackground.X + 1, barBackground.Y + 1, (int)((barBackground.Width - 2) * (Health / MaxHealth)), barBackground.Height - 2);
             spriteBatch.Draw(pixel, barBackground, Color.Black);
             spriteBatch.Draw(pixel, barFill, Color.OrangeRed);
         }

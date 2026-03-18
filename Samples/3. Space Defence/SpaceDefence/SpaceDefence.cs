@@ -23,7 +23,7 @@ namespace SpaceDefence
 
         public SpaceDefence()
         {
-            _graphics = new GraphicsDeviceManager(this);
+            _graphics = new(this);
             _graphics.IsFullScreen = false;
             _graphics.PreferredBackBufferWidth = 2000;
             _graphics.PreferredBackBufferHeight = 1200;
@@ -35,7 +35,7 @@ namespace SpaceDefence
         protected override void Initialize()
         {
             _gameManager = GameManager.GetGameManager();
-            Ship player = new Ship(new Point(_graphics.PreferredBackBufferWidth / 2, _graphics.PreferredBackBufferHeight / 2));
+            var player = new Ship(new(_graphics.PreferredBackBufferWidth / 2, _graphics.PreferredBackBufferHeight / 2));
             _gameManager.Initialize(Content, this, player);
             _gameManager.StartNewGame();
             base.Initialize();
@@ -43,8 +43,8 @@ namespace SpaceDefence
 
         protected override void LoadContent()
         {
-            _spriteBatch = new SpriteBatch(GraphicsDevice);
-            _pixel = new Texture2D(GraphicsDevice, 1, 1);
+            _spriteBatch = new(GraphicsDevice);
+            _pixel = new(GraphicsDevice, 1, 1);
             _pixel.SetData(new[] { Color.White });
             _font = Content.Load<SpriteFont>("HudFont");
             _gameManager.Load(Content);
@@ -151,23 +151,23 @@ namespace SpaceDefence
 
         private void DrawHud()
         {
-            Ship player = _gameManager.Player;
+            var player = _gameManager.Player;
             if (player == null)
                 return;
 
-            _spriteBatch.DrawString(_font, $"Score: {_gameManager.Score}", new Vector2(24, 18), Color.White);
-            _spriteBatch.DrawString(_font, $"Cargo: {(player.HasCargo ? "Loaded" : "Empty")}", new Vector2(24, 52), Color.White);
-            _spriteBatch.DrawString(_font, $"Weapon: {player.CurrentWeaponName}", new Vector2(24, 86), Color.White);
+            _spriteBatch.DrawString(_font, $"Score: {_gameManager.Score}", new(24, 18), Color.White);
+            _spriteBatch.DrawString(_font, $"Cargo: {(player.HasCargo ? "Loaded" : "Empty")}", new(24, 52), Color.White);
+            _spriteBatch.DrawString(_font, $"Weapon: {player.CurrentWeaponName}", new(24, 86), Color.White);
         }
 
         private void DrawOverlay(string title, string body)
         {
-            Rectangle panel = new Rectangle(GraphicsDevice.Viewport.Width / 2 - 340, GraphicsDevice.Viewport.Height / 2 - 160, 680, 320);
+            var panel = new Rectangle(GraphicsDevice.Viewport.Width / 2 - 340, GraphicsDevice.Viewport.Height / 2 - 160, 680, 320);
             _spriteBatch.Draw(_pixel, panel, Color.Black * 0.75f);
 
-            Vector2 titleSize = _font.MeasureString(title);
-            _spriteBatch.DrawString(_font, title, new Vector2(panel.Center.X - titleSize.X / 2f, panel.Y + 28), Color.Gold);
-            _spriteBatch.DrawString(_font, body, new Vector2(panel.X + 32, panel.Y + 92), Color.White);
+            var titleSize = _font.MeasureString(title);
+            _spriteBatch.DrawString(_font, title, new(panel.Center.X - titleSize.X / 2f, panel.Y + 28), Color.Gold);
+            _spriteBatch.DrawString(_font, body, new(panel.X + 32, panel.Y + 92), Color.White);
         }
     }
 }

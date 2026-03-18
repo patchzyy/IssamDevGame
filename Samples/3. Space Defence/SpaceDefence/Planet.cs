@@ -51,8 +51,8 @@ namespace SpaceDefence
 
         public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
         {
-            Rectangle source = _animation.GetSourceRectangle();
-            Rectangle destination = new Rectangle((int)(_center.X - 80), (int)(_center.Y - 80), 160, 160);
+            var source = _animation.GetSourceRectangle();
+            var destination = new Rectangle((int)(_center.X - 80), (int)(_center.Y - 80), 160, 160);
             spriteBatch.Draw(_texture, destination, source, Color.White);
             base.Draw(gameTime, spriteBatch);
         }

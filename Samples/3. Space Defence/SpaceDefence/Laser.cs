@@ -48,10 +48,8 @@ namespace SpaceDefence
 
         public override void OnCollision(GameObject other)
         {
-            if (_hitObjects.Contains(other))
+            if (!_hitObjects.Add(other))
                 return;
-
-            _hitObjects.Add(other);
 
             if (other is Alien alien)
                 alien.TakeDamage(Damage);

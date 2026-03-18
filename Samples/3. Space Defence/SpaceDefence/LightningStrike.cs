@@ -20,7 +20,7 @@ namespace SpaceDefence
         public override void Load(ContentManager content)
         {
             _texture = content.Load<Texture2D>("lightning");
-            _animation = new SpriteSheetAnimation(_texture, 32, 32, _texture.Width / 32, 0.02f, true);
+            _animation = new(_texture, 32, 32, _texture.Width / 32, 0.02f, true);
             base.Load(content);
         }
 
@@ -36,18 +36,18 @@ namespace SpaceDefence
 
         public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
         {
-            Rectangle source = _animation.GetSourceRectangle();
+            var source = _animation.GetSourceRectangle();
 
-            for (int i = 0; i < _points.Count - 1; i++)
+            for (var i = 0; i < _points.Count - 1; i++)
             {
-                Vector2 start = _points[i];
-                Vector2 end = _points[i + 1];
-                Vector2 difference = end - start;
-                float length = difference.Length();
+                var start = _points[i];
+                var end = _points[i + 1];
+                var difference = end - start;
+                var length = difference.Length();
                 if (length <= 0)
                     continue;
 
-                Rectangle target = new Rectangle((int)start.X, (int)start.Y, 18, (int)length);
+                var target = new Rectangle((int)start.X, (int)start.Y, 18, (int)length);
                 spriteBatch.Draw(_texture, target, source, Color.White, LinePieceCollider.GetAngle(Vector2.Normalize(difference)), new Vector2(source.Width / 2f, source.Height), SpriteEffects.None, 0);
             }
 

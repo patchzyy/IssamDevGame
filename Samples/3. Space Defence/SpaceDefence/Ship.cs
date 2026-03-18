@@ -63,10 +63,10 @@ namespace SpaceDefence
 
         public override void Update(GameTime gameTime)
         {
-            float elapsedSeconds = (float)gameTime.ElapsedGameTime.TotalSeconds;
-            Vector2 inputDirection = Vector2.Zero;
+            var elapsedSeconds = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            var inputDirection = Vector2.Zero;
 
-            InputManager inputManager = GameManager.GetGameManager().InputManager;
+            var inputManager = GameManager.GetGameManager().InputManager;
             if (inputManager.IsKeyDown(Keys.W))
                 inputDirection.Y -= 1;
             if (inputManager.IsKeyDown(Keys.S))
@@ -113,7 +113,7 @@ namespace SpaceDefence
 
             if (_lastVisitedPlanet != null)
             {
-                float releaseDistance = _lastVisitedPlanet.Radius + _rectangleCollider.shape.Width;
+                var releaseDistance = _lastVisitedPlanet.Radius + _rectangleCollider.shape.Width;
                 if (Vector2.Distance(_rectangleCollider.shape.Center.ToVector2(), _lastVisitedPlanet.Center) > releaseDistance)
                     _lastVisitedPlanet = null;
             }
@@ -123,7 +123,7 @@ namespace SpaceDefence
 
         public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
         {
-            Vector2 shipCenter = _rectangleCollider.shape.Center.ToVector2();
+            var shipCenter = _rectangleCollider.shape.Center.ToVector2();
 
             spriteBatch.Draw(
                 ship_body,
@@ -205,12 +205,12 @@ namespace SpaceDefence
 
         private void DrawHealthBar(SpriteBatch spriteBatch)
         {
-            Texture2D pixel = GameManager.GetGameManager().Pixel;
+            var pixel = GameManager.GetGameManager().Pixel;
             if (pixel == null)
                 return;
 
-            Rectangle barBackground = new Rectangle(_rectangleCollider.shape.X, _rectangleCollider.shape.Y - 18, _rectangleCollider.shape.Width, 8);
-            Rectangle barFill = new Rectangle(barBackground.X + 1, barBackground.Y + 1, (int)((barBackground.Width - 2) * (Health / MaxHealth)), barBackground.Height - 2);
+            var barBackground = new Rectangle(_rectangleCollider.shape.X, _rectangleCollider.shape.Y - 18, _rectangleCollider.shape.Width, 8);
+            var barFill = new Rectangle(barBackground.X + 1, barBackground.Y + 1, (int)((barBackground.Width - 2) * (Health / MaxHealth)), barBackground.Height - 2);
             spriteBatch.Draw(pixel, barBackground, Color.Black);
             spriteBatch.Draw(pixel, barFill, Color.LimeGreen);
         }
