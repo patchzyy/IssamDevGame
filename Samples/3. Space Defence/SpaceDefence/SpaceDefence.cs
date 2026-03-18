@@ -86,7 +86,7 @@ namespace SpaceDefence
                 DrawHud();
 
             if (_screen == GameScreen.Start)
-                DrawOverlay("Space Defence", "Enter: Start\nQ: Quit\n\nWASD to accelerate\nClick to fire\nEsc to pause\n\nExtra feature: health bars for the player and enemies.");
+                DrawOverlay("Space Defence", "Enter om te Starten \n Q: Quit \n\n WASD to accelerate \n Click to fire \n Esc to pause\n");
             else if (_screen == GameScreen.Paused)
                 DrawOverlay("Paused", "Enter or Esc: Continue\nQ: Quit");
             else if (_screen == GameScreen.GameOver)
