@@ -88,5 +88,10 @@ namespace SpaceDefence
         { 
         
         }
+
+        public Rectangle GetBounds()
+        {
+            return collider == null ? Rectangle.Empty : collider.GetBoundingBox();
+        }
     }
 }
