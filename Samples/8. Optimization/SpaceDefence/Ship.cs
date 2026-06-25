@@ -21,6 +21,9 @@ namespace SpaceDefence
         private Texture2D base_turret;
         private Color[] turretData;
         private Texture2D fadedTurret;
+        private Color[] bodyTintData;
+        private Color[] turretTintData;
+        private float _cachedHealthPercent = -1f;
         private RectangleCollider _rectangleCollider;
         private Point target;
         private Color teamColor;
@@ -45,10 +48,12 @@ namespace SpaceDefence
             ship_body = content.Load<Texture2D>("ship_body");
             fadedBody = new Texture2D(ship_body.GraphicsDevice, ship_body.Width, ship_body.Height);
             bodyData = new Color[ship_body.Width * ship_body.Height];
+            bodyTintData = new Color[bodyData.Length];
             ship_body.GetData<Color>(bodyData);
 
             base_turret = content.Load<Texture2D>("base_turret");
             turretData = new Color[base_turret.Width * base_turret.Height];
+            turretTintData = new Color[turretData.Length];
             base_turret.GetData<Color>(turretData);
             fadedTurret = new Texture2D(base_turret.GraphicsDevice, base_turret.Width, base_turret.Height);
             
@@ -76,7 +81,7 @@ namespace SpaceDefence
                 if (health < 0)
                 {
                     GameManager.GetGameManager().RemoveGameObject(this);
-                    ParticleData data = new ParticleData();
+                    var data = new ParticleData();
                     data.lifespan = 5;
                     data.particleCount = 40;
                     data.maxScale = .6f;
@@ -91,7 +96,7 @@ namespace SpaceDefence
         {
             base.Update(gameTime);
             cooldown -= (float)gameTime.ElapsedGameTime.TotalSeconds;
-            Ship nearest = FindNearestEnemy();
+            var nearest = FindNearestEnemy();
             target = nearest == null ? Point.Zero : nearest.GetPosition().Center;
 
             if( (target -GetPosition().Center).ToVector2().Length() < Range)
@@ -112,8 +117,8 @@ namespace SpaceDefence
         public Point Shoot()
         {
             cooldown = 0.5f;
-            Vector2 aimDirection = LinePieceCollider.GetDirection(GetPosition().Center, target);
-            Vector2 turretExit = _rectangleCollider.shape.Center.ToVector2() + aimDirection * base_turret.Height / 2f;
+            var aimDirection = LinePieceCollider.GetDirection(GetPosition().Center, target);
+            var turretExit = _rectangleCollider.shape.Center.ToVector2() + aimDirection * base_turret.Height / 2f;
             GameManager.GetGameManager().AddGameObject(new Bullet(turretExit, aimDirection, 150, CollisionType));
 
             return (-aimDirection * 20).ToPoint();
@@ -121,13 +126,13 @@ namespace SpaceDefence
 
         public Vector2 AvoidObstacles()
         {
-            Vector2 avoidance = Vector2.Zero;
-            foreach(GameObject other in GameManager.GetGameManager().GetGameObjects())
+            var avoidance = Vector2.Zero;
+            foreach(var other in GameManager.GetGameManager().GetGameObjects())
             {
                 if(other == this || !other.CollisionType.HasFlag(CollisionType.Solid))
                     continue;
-                Vector2 difference = (GetPosition().Center - other.GetPosition().Center).ToVector2();
-                float distance = difference.Length();
+                var difference = (GetPosition().Center - other.GetPosition().Center).ToVector2();
+                var distance = difference.Length();
                 if(distance < AvoidanceRange)
                 {
                     avoidance += (float)Math.Sqrt(AvoidanceRange)*speed * Vector2.Normalize(difference)/(float)Math.Sqrt(distance);
@@ -139,11 +144,11 @@ namespace SpaceDefence
         public Ship FindNearestEnemy()
         {
             Ship nearest = null;
-            foreach(GameObject candidate in GameManager.GetGameManager().GetGameObjects())
+            foreach(var candidate in GameManager.GetGameManager().GetGameObjects())
             {
                 if(candidate is Ship)
                 {
-                    Ship othership = (Ship)candidate;
+                    var othership = (Ship)candidate;
                     if((othership.CollisionType & CollisionType.Teams) == (CollisionType & CollisionType.Teams))
                         continue;
                     if(nearest == null )
@@ -151,9 +156,9 @@ namespace SpaceDefence
                         nearest = othership;
                         continue;
                     }
-                    Vector2 pos = GetPosition().Center.ToVector2();
-                    Vector2 nearPos = nearest.GetPosition().Center.ToVector2();
-                    Vector2 newPos = othership.GetPosition().Center.ToVector2();
+                    var pos = GetPosition().Center.ToVector2();
+                    var nearPos = nearest.GetPosition().Center.ToVector2();
+                    var newPos = othership.GetPosition().Center.ToVector2();
                     if( (pos - nearPos).Length() > (pos - newPos).Length() )
                     {
                         nearest = othership;
@@ -165,12 +170,17 @@ namespace SpaceDefence
 
         public override void Draw(GameTime gameTime, SpriteBatch spriteBatch)
         {
-            ReplaceAndFadeTexture(bodyData, fadedBody, teamColor, health / 100);
-            ReplaceAndFadeTexture(turretData, fadedTurret, teamColor, health / 100);
+            var percentage = health * 0.01f;
+            if (Math.Abs(_cachedHealthPercent - percentage) > 0.001) //my rider was complaining i cant compare floats 
+            {
+                ReplaceAndFadeTexture(bodyData, bodyTintData, fadedBody, teamColor, percentage);
+                ReplaceAndFadeTexture(turretData, turretTintData, fadedTurret, teamColor, percentage);
+                _cachedHealthPercent = percentage;
+            }
 
             spriteBatch.Draw(fadedBody, _rectangleCollider.shape, Color.White);
-            float aimAngle = LinePieceCollider.GetAngle(LinePieceCollider.GetDirection(GetPosition().Center, target));
-            Rectangle turretLocation = base_turret.Bounds;
+            var aimAngle = LinePieceCollider.GetAngle(LinePieceCollider.GetDirection(GetPosition().Center, target));
+            var turretLocation = base_turret.Bounds;
             turretLocation.Location = _rectangleCollider.shape.Center;
             spriteBatch.Draw(fadedTurret, turretLocation, null, Color.White, aimAngle, turretLocation.Size.ToVector2() / 2f, SpriteEffects.None, 0);
 
@@ -184,30 +194,36 @@ namespace SpaceDefence
         /// <param name="target">The buffer on the graphics card to write the data to</param>
         /// <param name="color">The color to make the ship (alpha is ignored)</param>
         /// <param name="percentage">The percentage of health left</param>
-        public static void ReplaceAndFadeTexture(Color[] textureData, Texture2D target, Color color, float percentage)
+        public static void ReplaceAndFadeTexture(
+            Color[] textureData,
+            Color[] targetData,
+            Texture2D target,
+            Color color,
+            float percentage)
         {
+            percentage = MathHelper.Clamp(percentage, 0f, 1f);
 
-            Color[] targetData = new Color[textureData.Length];
+            var redM = (color.R * percentage) / 255;
+            var greenM = (color.G * percentage) / 255;
+            var blueM = (color.B * percentage) / 255;
 
-            for (int i = 0; i < targetData.Length; i++)
+            for (var i = 0; i < targetData.Length; i++)
             {
-                if (textureData[i].R == textureData[i].B && textureData[i].G == 0 && textureData[i].R != 0)
-                {
-                    // Read the Red chanel out as a float instead of a byte
-                    float originalShade = textureData[i].ToVector4().X;
+                var sourcePixel = textureData[i];
 
-                    // Fade the pixel to black based on health percentage and shading
-                    targetData[i].R = (byte)(color.R * percentage * originalShade);
-                    targetData[i].G = (byte)(color.G * percentage * originalShade);
-                    targetData[i].B = (byte)(color.B * percentage * originalShade);
-                    targetData[i].A = textureData[i].A;
-                }
-                else
+                if (sourcePixel.R == sourcePixel.B &&
+                    sourcePixel.G == 0 &&
+                    sourcePixel.R != 0)
                 {
-                    targetData[i] = textureData[i];
+                    targetData[i].R = (byte)(sourcePixel.R * redM);
+                    targetData[i].G = (byte)(sourcePixel.R * greenM);
+                    targetData[i].B = (byte)(sourcePixel.R * blueM);
+                    targetData[i].A = sourcePixel.A;
                 }
-
+                else targetData[i] = sourcePixel;
+                
             }
+
             target.SetData(targetData);
         }
 
