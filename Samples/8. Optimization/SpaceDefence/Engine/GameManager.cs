@@ -15,6 +15,8 @@ namespace SpaceDefence
         private List<GameObject> _gameObjects;
         private List<GameObject> _toBeRemoved;
         private List<GameObject> _toBeAdded;
+        private List<GameObject> _collidableObjects;
+        private List<Rectangle> _collidableBounds;
         private ContentManager _content;
         public Matrix WorldMatrix { get; set; }
 
@@ -33,6 +35,8 @@ namespace SpaceDefence
             _gameObjects = new List<GameObject>();
             _toBeRemoved = new List<GameObject>();
             _toBeAdded = new List<GameObject>();
+            _collidableObjects = new List<GameObject>();
+            _collidableBounds = new List<Rectangle>();
             InputManager = new InputManager();
             RNG = new Random();
             //WorldMatrix = Matrix.CreateScale(.3f);
@@ -64,16 +68,33 @@ namespace SpaceDefence
 
         public void CheckCollision()
         {
-            // Checks once for every pair of 2 GameObjects if the collide.
-            for (int i = 0; i < _gameObjects.Count; i++)
+            _collidableObjects.Clear();
+            _collidableBounds.Clear();
+            foreach (var gameObject in _gameObjects)
             {
-                for (int j = i+1; j < _gameObjects.Count; j++)
+                if (!gameObject.HasCollider)
+                    continue;
+
+                var bounds = gameObject.GetCollisionBounds();
+                bounds.Inflate(1, 1); //jsut to be safe
+                _collidableObjects.Add(gameObject);
+                _collidableBounds.Add(bounds);
+            }
+            
+            for (var i = 0; i < _collidableObjects.Count; i++)
+            {
+                var first = _collidableObjects[i];
+                var firstBounds = _collidableBounds[i];
+
+                for (var j = i + 1; j < _collidableObjects.Count; j++)
                 {
-                    if (_gameObjects[i].CheckCollision(_gameObjects[j]))
-                    {
-                        _gameObjects[i].OnCollision(_gameObjects[j]);
-                        _gameObjects[j].OnCollision(_gameObjects[i]);
-                    }
+                    if (!firstBounds.Intersects(_collidableBounds[j]))
+                        continue;
+
+                    var second = _collidableObjects[j];
+                    if (!first.CheckCollision(second)) continue;
+                    first.OnCollision(second);
+                    second.OnCollision(first);
                 }
             }
             

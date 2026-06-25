@@ -10,6 +10,8 @@ namespace SpaceDefence
         protected Collider collider;
         public CollisionType CollisionType;
 
+        internal bool HasCollider => collider != null;
+
         /// <summary>
         /// Used to set the collider used for object collision.
         /// </summary>
@@ -51,6 +53,11 @@ namespace SpaceDefence
             if (collider == null)
                 return false;
             return collider.CheckIntersection(other.collider);
+        }
+
+        internal Rectangle GetCollisionBounds()
+        {
+            return collider.GetBoundingBox();
         }
 
         /// <summary>
