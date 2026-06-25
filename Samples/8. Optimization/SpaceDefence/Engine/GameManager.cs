@@ -39,8 +39,7 @@ namespace SpaceDefence
             _collidableBounds = new List<Rectangle>();
             InputManager = new InputManager();
             RNG = new Random();
-            //WorldMatrix = Matrix.CreateScale(.3f);
-            WorldMatrix = Matrix.CreateScale(0.8f) * Matrix.CreateTranslation(0, -600, 0);
+            WorldMatrix = Matrix.CreateScale(0.25f);
         }
 
         public void Initialize(ContentManager content, Game game)
