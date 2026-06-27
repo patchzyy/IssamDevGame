@@ -127,16 +127,21 @@ namespace SpaceDefence
         public Vector2 AvoidObstacles()
         {
             var avoidance = Vector2.Zero;
-            foreach(var other in GameManager.GetGameManager().GetGameObjects())
+            var myCenter = GetPosition().Center;
+            var avoidanceRangeSquared = AvoidanceRange * AvoidanceRange;
+            var avoidanceStrength = (float)Math.Sqrt(AvoidanceRange) * speed;
+            foreach(var other in GameManager.GetGameManager().GetShips())
             {
-                if(other == this || !other.CollisionType.HasFlag(CollisionType.Solid))
+                if(other == this)
                     continue;
-                var difference = (GetPosition().Center - other.GetPosition().Center).ToVector2();
-                var distance = difference.Length();
-                if(distance < AvoidanceRange)
-                {
-                    avoidance += (float)Math.Sqrt(AvoidanceRange)*speed * Vector2.Normalize(difference)/(float)Math.Sqrt(distance);
-                }
+
+                var difference = (myCenter - other.GetPosition().Center).ToVector2();
+                var distanceSquared = difference.LengthSquared();
+                if(distanceSquared >= avoidanceRangeSquared)
+                    continue;
+
+                var distance = (float)Math.Sqrt(distanceSquared);
+                avoidance += avoidanceStrength * difference/(distance * (float)Math.Sqrt(distance));
             }
             return avoidance;
         }
