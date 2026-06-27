@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using SpaceDefence.Collision;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Content;
@@ -21,12 +22,11 @@ namespace SpaceDefence
         private Texture2D base_turret;
         private Color[] turretData;
         private Texture2D fadedTurret;
-        private Color[] bodyTintData;
-        private Color[] turretTintData;
         private float _cachedHealthPercent = -1f;
         private RectangleCollider _rectangleCollider;
         private Point target;
         private Color teamColor;
+        private static readonly Dictionary<LeCacheKey, Texture2D> TintedTextures = new Dictionary<LeCacheKey, Texture2D>();
 
         /// <summary>
         /// The player character
@@ -46,16 +46,14 @@ namespace SpaceDefence
 
             // Setting up the texture data so we can apply our colouring later
             ship_body = content.Load<Texture2D>("ship_body");
-            fadedBody = new Texture2D(ship_body.GraphicsDevice, ship_body.Width, ship_body.Height);
+            fadedBody = ship_body;
             bodyData = new Color[ship_body.Width * ship_body.Height];
-            bodyTintData = new Color[bodyData.Length];
             ship_body.GetData<Color>(bodyData);
 
             base_turret = content.Load<Texture2D>("base_turret");
             turretData = new Color[base_turret.Width * base_turret.Height];
-            turretTintData = new Color[turretData.Length];
             base_turret.GetData<Color>(turretData);
-            fadedTurret = new Texture2D(base_turret.GraphicsDevice, base_turret.Width, base_turret.Height);
+            fadedTurret = base_turret;
             
             _rectangleCollider.shape.Size = ship_body.Bounds.Size;
             _rectangleCollider.shape.Location -= new Point(ship_body.Width/2, ship_body.Height/2);
@@ -174,8 +172,8 @@ namespace SpaceDefence
             var percentage = health * 0.01f;
             if (Math.Abs(_cachedHealthPercent - percentage) > 0.001) //my rider was complaining i cant compare floats 
             {
-                ReplaceAndFadeTexture(bodyData, bodyTintData, fadedBody, teamColor, percentage);
-                ReplaceAndFadeTexture(turretData, turretTintData, fadedTurret, teamColor, percentage);
+                fadedBody = ReplaceAndFadeTexture(bodyData, ship_body, teamColor, percentage);
+                fadedTurret = ReplaceAndFadeTexture(turretData, base_turret, teamColor, percentage);
                 _cachedHealthPercent = percentage;
             }
 
@@ -195,18 +193,21 @@ namespace SpaceDefence
         /// <param name="target">The buffer on the graphics card to write the data to</param>
         /// <param name="color">The color to make the ship (alpha is ignored)</param>
         /// <param name="percentage">The percentage of health left</param>
-        public static void ReplaceAndFadeTexture(
+        public static Texture2D ReplaceAndFadeTexture(
             Color[] textureData,
-            Color[] targetData,
-            Texture2D target,
+            Texture2D sourseTexture,
             Color color,
             float percentage)
         {
             percentage = MathHelper.Clamp(percentage, 0f, 1f);
+            var cacheKey = new LeCacheKey(sourseTexture, color, percentage);
+            if (TintedTextures.TryGetValue(cacheKey, out var cachedTexture))
+                return cachedTexture;
 
             var redM = (color.R * percentage) / 255;
             var greenM = (color.G * percentage) / 255;
             var blueM = (color.B * percentage) / 255;
+            var targetData = new Color[textureData.Length];
 
             for (var i = 0; i < targetData.Length; i++)
             {
@@ -224,8 +225,33 @@ namespace SpaceDefence
                 else targetData[i] = sourcePixel;
                 
             }
-
+            
+            var target = new Texture2D(sourseTexture.GraphicsDevice, sourseTexture.Width, sourseTexture.Height);
             target.SetData(targetData);
+            TintedTextures.Add(cacheKey, target);
+            return target;
+        }
+
+        private readonly struct LeCacheKey(Texture2D source, Color color, float percentage) : IEquatable<LeCacheKey>
+        {
+            private readonly Texture2D _source = source;
+            private readonly uint _color = color.PackedValue;
+            private readonly float _percentage = percentage;
+
+            public override bool Equals(object obje)
+            {
+                return obje is LeCacheKey other && Equals(other);
+            }
+
+            public override int GetHashCode()
+            {
+                return HashCode.Combine(_source, _color, _percentage);
+            }
+
+            public bool Equals(LeCacheKey other)
+            {
+                return ReferenceEquals(_source, other._source) && _color == other._color && _percentage.Equals(other._percentage);
+            }
         }
 
     }
