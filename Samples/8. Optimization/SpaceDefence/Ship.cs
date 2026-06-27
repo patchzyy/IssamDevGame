@@ -144,26 +144,22 @@ namespace SpaceDefence
         public Ship FindNearestEnemy()
         {
             Ship nearest = null;
-            foreach(var candidate in GameManager.GetGameManager().GetGameObjects())
+            var nearestDistance = float.MaxValue;
+            var myPosition = GetPosition().Center.ToVector2();
+            
+            foreach(var othership in GameManager.GetGameManager().GetShips())
             {
-                if(candidate is Ship)
-                {
-                    var othership = (Ship)candidate;
-                    if((othership.CollisionType & CollisionType.Teams) == (CollisionType & CollisionType.Teams))
-                        continue;
-                    if(nearest == null )
-                    {
-                        nearest = othership;
-                        continue;
-                    }
-                    var pos = GetPosition().Center.ToVector2();
-                    var nearPos = nearest.GetPosition().Center.ToVector2();
-                    var newPos = othership.GetPosition().Center.ToVector2();
-                    if( (pos - nearPos).Length() > (pos - newPos).Length() )
-                    {
-                        nearest = othership;
-                    }
-                }
+                if(othership == this)
+                    continue;
+                if((othership.CollisionType & CollisionType.Teams) == (CollisionType & CollisionType.Teams))
+                    continue;
+                
+                //quick to find nearest
+                var newDistance = Vector2.DistanceSquared(othership.GetPosition().Center.ToVector2(), myPosition);
+                if (newDistance >= nearestDistance)
+                    continue;
+                nearest = othership;
+                nearestDistance = newDistance;
             }
             return nearest;
         }
@@ -229,3 +225,4 @@ namespace SpaceDefence
 
     }
 }
+

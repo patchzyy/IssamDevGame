@@ -17,6 +17,7 @@ namespace SpaceDefence
         private List<GameObject> _toBeAdded;
         private List<GameObject> _collidableObjects;
         private List<Rectangle> _collidableBounds;
+        private List<Ship> _ships;
         private ContentManager _content;
         public Matrix WorldMatrix { get; set; }
 
@@ -37,6 +38,7 @@ namespace SpaceDefence
             _toBeAdded = new List<GameObject>();
             _collidableObjects = new List<GameObject>();
             _collidableBounds = new List<Rectangle>();
+            _ships = new List<Ship>();
             InputManager = new InputManager();
             RNG = new Random();
             WorldMatrix = Matrix.CreateScale(0.25f);
@@ -118,6 +120,8 @@ namespace SpaceDefence
             foreach (GameObject gameObject in _toBeAdded)
             {
                 gameObject.Load(_content);
+                if(gameObject is Ship ship)
+                    _ships.Add(ship);
                 _gameObjects.Add(gameObject);
             }
             _toBeAdded.Clear();
@@ -125,6 +129,8 @@ namespace SpaceDefence
             foreach (GameObject gameObject in _toBeRemoved)
             {
                 gameObject.Destroy();
+                if(gameObject is Ship ship)
+                    _ships.Remove(ship);
                 _gameObjects.Remove(gameObject);
             }
             _toBeRemoved.Clear();
@@ -168,6 +174,11 @@ namespace SpaceDefence
         public List<GameObject> GetGameObjects()
         {
             return _gameObjects;
+        }
+
+        public List<Ship> GetShips()
+        {
+            return _ships;
         }
 
         /// <summary>
