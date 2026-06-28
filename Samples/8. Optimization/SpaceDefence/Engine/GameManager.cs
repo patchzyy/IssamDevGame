@@ -89,10 +89,15 @@ namespace SpaceDefence
 
                 for (var j = i + 1; j < _collidableObjects.Count; j++)
                 {
+                    var second = _collidableObjects[j];
+                    if ((first.CollisionType & second.CollisionType) != 0)
+                        continue;
+                    if (first is Bullet && second is Bullet)
+                        continue;
+
                     if (!firstBounds.Intersects(_collidableBounds[j]))
                         continue;
 
-                    var second = _collidableObjects[j];
                     if (!first.CheckCollision(second)) continue;
                     first.OnCollision(second);
                     second.OnCollision(first);
