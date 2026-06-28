@@ -15,10 +15,15 @@ namespace SpaceDefence
         private List<GameObject> _gameObjects;
         private List<GameObject> _toBeRemoved;
         private List<GameObject> _toBeAdded;
-        private List<GameObject> _collidableObjects;
-        private List<Rectangle> _collidableBounds;
+        private List<GameObject> _colObjects;
+        private List<Rectangle> _colBounds;
+        private Dictionary<Point, List<int>> _colBuckets;
+        private List<Point> _activeColBuckets;
+        private int[] _seenColCandid;
+        private int _collCandidateMarker;
         private List<Ship> _ships;
         private ContentManager _content;
+        private const int CollisionGridSize = 128;
         public Matrix WorldMatrix { get; set; }
 
         public Random RNG { get; private set; }
@@ -36,8 +41,11 @@ namespace SpaceDefence
             _gameObjects = new List<GameObject>();
             _toBeRemoved = new List<GameObject>();
             _toBeAdded = new List<GameObject>();
-            _collidableObjects = new List<GameObject>();
-            _collidableBounds = new List<Rectangle>();
+            _colObjects = new List<GameObject>();
+            _colBounds = new List<Rectangle>();
+            _colBuckets = new Dictionary<Point, List<int>>();
+            _activeColBuckets = new List<Point>();
+            _seenColCandid = Array.Empty<int>();
             _ships = new List<Ship>();
             InputManager = new InputManager();
             RNG = new Random();
@@ -69,8 +77,15 @@ namespace SpaceDefence
 
         public void CheckCollision()
         {
-            _collidableObjects.Clear();
-            _collidableBounds.Clear();
+            ClearCollisionGrid();
+            CollectCollidersForCollision();
+            SweepCollisionGrid();
+        }
+
+        private void CollectCollidersForCollision()
+        {
+            _colObjects.Clear();
+            _colBounds.Clear();
             foreach (var gameObject in _gameObjects)
             {
                 if (!gameObject.HasCollider)
@@ -78,32 +93,102 @@ namespace SpaceDefence
 
                 var bounds = gameObject.GetCollisionBounds();
                 bounds.Inflate(1, 1); //jsut to be safe
-                _collidableObjects.Add(gameObject);
-                _collidableBounds.Add(bounds);
+                _colObjects.Add(gameObject);
+                _colBounds.Add(bounds);
             }
-            
-            for (var i = 0; i < _collidableObjects.Count; i++)
+
+            if (_seenColCandid.Length < _colObjects.Count)
+                Array.Resize(ref _seenColCandid, _colObjects.Count);
+        }
+
+        private void SweepCollisionGrid()
+        {
+            for (var i = 0; i < _colObjects.Count; i++)
             {
-                var first = _collidableObjects[i];
-                var firstBounds = _collidableBounds[i];
+                var bounds = _colBounds[i];
+                var minCell = GetCollisionCell(bounds.Left, bounds.Top);
+                var maxCell = GetCollisionCell(bounds.Right - 1, bounds.Bottom - 1);
 
-                for (var j = i + 1; j < _collidableObjects.Count; j++)
+                StartCollisionCandidatePass();
+                for (var x = minCell.X; x <= maxCell.X; x++)
                 {
-                    var second = _collidableObjects[j];
-                    if ((first.CollisionType & second.CollisionType) != 0)
-                        continue;
-                    if (first is Bullet && second is Bullet)
-                        continue;
+                    for (var y = minCell.Y; y <= maxCell.Y; y++)
+                    {
+                        var bucket = GetCollisionBucket(new Point(x, y));
+                        var wasEmpty = bucket.Count == 0;
 
-                    if (!firstBounds.Intersects(_collidableBounds[j]))
-                        continue;
+                        foreach (var candidateIndex in bucket)
+                        {
+                            if (_seenColCandid[candidateIndex] == _collCandidateMarker)
+                                continue;
 
-                    if (!first.CheckCollision(second)) continue;
-                    first.OnCollision(second);
-                    second.OnCollision(first);
+                            _seenColCandid[candidateIndex] = _collCandidateMarker;
+                            CheckCollisionPair(candidateIndex, i);
+                        }
+
+                        bucket.Add(i);
+                        if (wasEmpty)
+                            _activeColBuckets.Add(new Point(x, y));
+                    }
                 }
             }
             
+        }
+
+        private void ClearCollisionGrid()
+        {
+            foreach (var cell in _activeColBuckets)
+                _colBuckets[cell].Clear();
+
+            _activeColBuckets.Clear();
+        }
+
+        private List<int> GetCollisionBucket(Point cell)
+        {
+            if (_colBuckets.TryGetValue(cell, out var bucket))
+                return bucket;
+
+            bucket = new List<int>();
+            _colBuckets.Add(cell, bucket);
+            return bucket;
+        }
+
+        private void StartCollisionCandidatePass()
+        {
+            _collCandidateMarker++;
+            if (_collCandidateMarker != int.MaxValue)
+                return;
+
+            Array.Clear(_seenColCandid, 0, _seenColCandid.Length);
+            _collCandidateMarker = 1;
+        }
+
+        private void CheckCollisionPair(int firstIndex, int secondIndex)
+        {
+            var first = _colObjects[firstIndex];
+            var second = _colObjects[secondIndex];
+            
+            if ((first.CollisionType & second.CollisionType) != 0)
+                return;
+            
+            if (first is Bullet && second is Bullet)
+                return;
+            
+            if (!_colBounds[firstIndex].Intersects(_colBounds[secondIndex]))
+                return;
+
+            if (!first.CheckCollision(second)) 
+                return;
+            
+            first.OnCollision(second);
+            second.OnCollision(first);
+        }
+
+        private static Point GetCollisionCell(int x, int y)
+        {
+            var newx = (int)Math.Floor(x / (double)CollisionGridSize);
+            var newy = (int)Math.Floor(y / (double)CollisionGridSize);
+            return new  Point(newx, newy);
         }
         
         public void Update(GameTime gameTime) 
