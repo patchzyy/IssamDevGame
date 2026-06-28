@@ -14,6 +14,7 @@ namespace SpaceDefence
         private FPSCounter counter;
         private List<GameObject> _gameObjects;
         private List<GameObject> _toBeRemoved;
+        private HashSet<GameObject> _toBeRemovedSet;
         private List<GameObject> _toBeAdded;
         private List<GameObject> _colObjects;
         private List<Rectangle> _colBounds;
@@ -40,6 +41,7 @@ namespace SpaceDefence
         {
             _gameObjects = new List<GameObject>();
             _toBeRemoved = new List<GameObject>();
+            _toBeRemovedSet = new HashSet<GameObject>();
             _toBeAdded = new List<GameObject>();
             _colObjects = new List<GameObject>();
             _colBounds = new List<Rectangle>();
@@ -216,14 +218,21 @@ namespace SpaceDefence
             }
             _toBeAdded.Clear();
 
-            foreach (GameObject gameObject in _toBeRemoved)
-            {
+            RemoveQueuedGameObjects();
+        }
+
+        private void RemoveQueuedGameObjects()
+        {
+            if (_toBeRemoved.Count == 0)
+                return;
+
+            foreach (var gameObject in _toBeRemoved)
                 gameObject.Destroy();
-                if(gameObject is Ship ship)
-                    _ships.Remove(ship);
-                _gameObjects.Remove(gameObject);
-            }
+
+            _gameObjects.RemoveAll(gameObject => _toBeRemovedSet.Contains(gameObject));
+            _ships.RemoveAll(ship => _toBeRemovedSet.Contains(ship));
             _toBeRemoved.Clear();
+            _toBeRemovedSet.Clear();
         }
 
         public void Draw(GameTime gameTime, SpriteBatch spriteBatch) 
@@ -258,7 +267,8 @@ namespace SpaceDefence
         /// <param name="gameObject"> The GameObject to Remove. </param>
         public void RemoveGameObject(GameObject gameObject)
         {
-            _toBeRemoved.Add(gameObject);
+            if (_toBeRemovedSet.Add(gameObject))
+                _toBeRemoved.Add(gameObject);
         }
 
         public List<GameObject> GetGameObjects()
