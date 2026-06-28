@@ -94,10 +94,12 @@ namespace SpaceDefence
         {
             base.Update(gameTime);
             cooldown -= (float)gameTime.ElapsedGameTime.TotalSeconds;
-            var nearest = FindNearestEnemy();
-            target = nearest == null ? Point.Zero : nearest.GetPosition().Center;
+            var elapsedSeconds = (float)gameTime.ElapsedGameTime.TotalSeconds;
+            var center = _rectangleCollider.shape.Center;
+            var nearest = FindNearestEnemy(center);
+            target = nearest == null ? Point.Zero : nearest._rectangleCollider.shape.Center;
 
-            if( (target -GetPosition().Center).ToVector2().Length() < Range)
+            if( (target - center).ToVector2().LengthSquared() < Range * Range)
             {
                 if(cooldown < 0)
                 {
@@ -106,16 +108,16 @@ namespace SpaceDefence
             }
             else
             {
-                _rectangleCollider.shape.Location += (Vector2.Normalize((target -GetPosition().Center).ToVector2()) * speed  * (float)gameTime.ElapsedGameTime.TotalSeconds).ToPoint();
+                _rectangleCollider.shape.Location += (Vector2.Normalize((target - center).ToVector2()) * speed * elapsedSeconds).ToPoint();
             }
-            _rectangleCollider.shape.Location += (AvoidObstacles()* (float)gameTime.ElapsedGameTime.TotalSeconds).ToPoint();
+            _rectangleCollider.shape.Location += (AvoidObstacles(_rectangleCollider.shape.Center) * elapsedSeconds).ToPoint();
 
         }
 
         public Point Shoot()
         {
             cooldown = 0.5f;
-            var aimDirection = LinePieceCollider.GetDirection(GetPosition().Center, target);
+            var aimDirection = LinePieceCollider.GetDirection(_rectangleCollider.shape.Center, target);
             var turretExit = _rectangleCollider.shape.Center.ToVector2() + aimDirection * base_turret.Height / 2f;
             GameManager.GetGameManager().AddGameObject(new Bullet(turretExit, aimDirection, 150, CollisionType));
 
@@ -124,8 +126,12 @@ namespace SpaceDefence
 
         public Vector2 AvoidObstacles()
         {
+            return AvoidObstacles(_rectangleCollider.shape.Center);
+        }
+
+        private Vector2 AvoidObstacles(Point myCenter)
+        {
             var avoidance = Vector2.Zero;
-            var myCenter = GetPosition().Center;
             var avoidanceRangeSquared = AvoidanceRange * AvoidanceRange;
             var avoidanceStrength = (float)Math.Sqrt(AvoidanceRange) * speed;
             foreach(var other in GameManager.GetGameManager().GetShips())
@@ -133,7 +139,7 @@ namespace SpaceDefence
                 if(other == this)
                     continue;
 
-                var difference = (myCenter - other.GetPosition().Center).ToVector2();
+                var difference = (myCenter - other._rectangleCollider.shape.Center).ToVector2();
                 var distanceSquared = difference.LengthSquared();
                 if(distanceSquared >= avoidanceRangeSquared)
                     continue;
@@ -146,19 +152,19 @@ namespace SpaceDefence
 
         public Ship FindNearestEnemy()
         {
+            return FindNearestEnemy(_rectangleCollider.shape.Center);
+        }
+
+        private Ship FindNearestEnemy(Point center)
+        {
             Ship nearest = null;
             var nearestDistance = float.MaxValue;
-            var myPosition = GetPosition().Center.ToVector2();
+            var myPosition = center.ToVector2();
             
-            foreach(var othership in GameManager.GetGameManager().GetShips())
+            foreach(var othership in GameManager.GetGameManager().GetEnemyShips(CollisionType))
             {
-                if(othership == this)
-                    continue;
-                if((othership.CollisionType & CollisionType.Teams) == (CollisionType & CollisionType.Teams))
-                    continue;
-                
                 //quick to find nearest
-                var newDistance = Vector2.DistanceSquared(othership.GetPosition().Center.ToVector2(), myPosition);
+                var newDistance = Vector2.DistanceSquared(othership._rectangleCollider.shape.Center.ToVector2(), myPosition);
                 if (newDistance >= nearestDistance)
                     continue;
                 nearest = othership;

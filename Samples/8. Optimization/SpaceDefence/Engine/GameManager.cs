@@ -23,6 +23,8 @@ namespace SpaceDefence
         private int[] _seenColCandid;
         private int _collCandidateMarker;
         private List<Ship> _ships;
+        private List<Ship> _team1Ships;
+        private List<Ship> _team2Ships;
         private ContentManager _content;
         private const int CollisionGridSize = 128;
         public Matrix WorldMatrix { get; set; }
@@ -49,6 +51,8 @@ namespace SpaceDefence
             _activeColBuckets = new List<Point>();
             _seenColCandid = Array.Empty<int>();
             _ships = new List<Ship>();
+            _team1Ships = new List<Ship>();
+            _team2Ships = new List<Ship>();
             InputManager = new InputManager();
             RNG = new Random();
             WorldMatrix = Matrix.CreateScale(0.2f);
@@ -213,7 +217,10 @@ namespace SpaceDefence
             {
                 gameObject.Load(_content);
                 if(gameObject is Ship ship)
+                {
                     _ships.Add(ship);
+                    GetTeamShips(ship.CollisionType).Add(ship);
+                }
                 _gameObjects.Add(gameObject);
             }
             _toBeAdded.Clear();
@@ -231,6 +238,8 @@ namespace SpaceDefence
 
             _gameObjects.RemoveAll(gameObject => _toBeRemovedSet.Contains(gameObject));
             _ships.RemoveAll(ship => _toBeRemovedSet.Contains(ship));
+            _team1Ships.RemoveAll(ship => _toBeRemovedSet.Contains(ship));
+            _team2Ships.RemoveAll(ship => _toBeRemovedSet.Contains(ship));
             _toBeRemoved.Clear();
             _toBeRemovedSet.Clear();
         }
@@ -279,6 +288,24 @@ namespace SpaceDefence
         public List<Ship> GetShips()
         {
             return _ships;
+        }
+
+        public List<Ship> GetEnemyShips(CollisionType collisionType)
+        {
+            var isTeam1 = (collisionType & CollisionType.Team1) != 0;
+            if (isTeam1)
+                return _team2Ships;
+
+            return _team1Ships;
+        }
+
+        private List<Ship> GetTeamShips(CollisionType collisionType)
+        {
+            var isTeam1 = (collisionType & CollisionType.Team1) != 0;
+            if (isTeam1)
+                return _team1Ships;
+
+            return _team2Ships;
         }
 
         /// <summary>
