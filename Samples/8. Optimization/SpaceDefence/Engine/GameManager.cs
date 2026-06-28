@@ -61,7 +61,8 @@ namespace SpaceDefence
             _nearShips = new List<Ship>();
             InputManager = new InputManager();
             RNG = new Random();
-            WorldMatrix = Matrix.CreateScale(0.2f);
+            //WorldMatrix = Matrix.CreateScale(.3f);
+            WorldMatrix = Matrix.CreateScale(0.8f) * Matrix.CreateTranslation(0, -600, 0);
         }
 
         public void Initialize(ContentManager content, Game game)
