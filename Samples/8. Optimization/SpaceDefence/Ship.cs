@@ -27,6 +27,7 @@ namespace SpaceDefence
         private Point target;
         private Color teamColor;
         private static readonly Dictionary<LeCacheKey, Texture2D> TintedTextures = new Dictionary<LeCacheKey, Texture2D>();
+        internal Point Center => _rectangleCollider.shape.Center;
 
         /// <summary>
         /// The player character
@@ -93,6 +94,7 @@ namespace SpaceDefence
         public override void Update(GameTime gameTime)
         {
             base.Update(gameTime);
+            var gameManager = GameManager.GetGameManager();
             cooldown -= (float)gameTime.ElapsedGameTime.TotalSeconds;
             var elapsedSeconds = (float)gameTime.ElapsedGameTime.TotalSeconds;
             var center = _rectangleCollider.shape.Center;
@@ -110,7 +112,9 @@ namespace SpaceDefence
             {
                 _rectangleCollider.shape.Location += (Vector2.Normalize((target - center).ToVector2()) * speed * elapsedSeconds).ToPoint();
             }
-            _rectangleCollider.shape.Location += (AvoidObstacles(_rectangleCollider.shape.Center) * elapsedSeconds).ToPoint();
+            gameManager.UpdateShipInAvoidanceGrid(this);
+            _rectangleCollider.shape.Location += (AvoidObstacles(_rectangleCollider.shape.Center, gameManager) * elapsedSeconds).ToPoint();
+            gameManager.UpdateShipInAvoidanceGrid(this);
 
         }
 
@@ -126,20 +130,20 @@ namespace SpaceDefence
 
         public Vector2 AvoidObstacles()
         {
-            return AvoidObstacles(_rectangleCollider.shape.Center);
+            return AvoidObstacles(_rectangleCollider.shape.Center, GameManager.GetGameManager());
         }
 
-        private Vector2 AvoidObstacles(Point myCenter)
+        private Vector2 AvoidObstacles(Point myCenter, GameManager gameManager)
         {
             var avoidance = Vector2.Zero;
             var avoidanceRangeSquared = AvoidanceRange * AvoidanceRange;
             var avoidanceStrength = (float)Math.Sqrt(AvoidanceRange) * speed;
-            foreach(var other in GameManager.GetGameManager().GetShips())
+            foreach(var other in gameManager.GetShipsNear(myCenter, AvoidanceRange))
             {
                 if(other == this)
                     continue;
 
-                var difference = (myCenter - other._rectangleCollider.shape.Center).ToVector2();
+                var difference = (myCenter - other.Center).ToVector2();
                 var distanceSquared = difference.LengthSquared();
                 if(distanceSquared >= avoidanceRangeSquared)
                     continue;

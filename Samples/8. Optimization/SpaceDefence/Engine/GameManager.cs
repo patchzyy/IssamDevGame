@@ -25,6 +25,9 @@ namespace SpaceDefence
         private List<Ship> _ships;
         private List<Ship> _team1Ships;
         private List<Ship> _team2Ships;
+        private Dictionary<Point, List<Ship>> _avoidanceGrid;
+        private Dictionary<Ship, Point> _shipAvoidanceCell;
+        private List<Ship> _nearShips;
         private ContentManager _content;
         private const int CollisionGridSize = 128;
         public Matrix WorldMatrix { get; set; }
@@ -53,6 +56,9 @@ namespace SpaceDefence
             _ships = new List<Ship>();
             _team1Ships = new List<Ship>();
             _team2Ships = new List<Ship>();
+            _avoidanceGrid = new Dictionary<Point, List<Ship>>();
+            _shipAvoidanceCell = new Dictionary<Ship, Point>();
+            _nearShips = new List<Ship>();
             InputManager = new InputManager();
             RNG = new Random();
             WorldMatrix = Matrix.CreateScale(0.2f);
@@ -205,6 +211,7 @@ namespace SpaceDefence
 
 
             // Update
+            RebuildAvoidanceGrid();
             foreach (GameObject gameObject in _gameObjects)
             {
                 gameObject.Update(gameTime);
@@ -240,6 +247,11 @@ namespace SpaceDefence
             _ships.RemoveAll(ship => _toBeRemovedSet.Contains(ship));
             _team1Ships.RemoveAll(ship => _toBeRemovedSet.Contains(ship));
             _team2Ships.RemoveAll(ship => _toBeRemovedSet.Contains(ship));
+            foreach (var gameObject in _toBeRemoved)
+            {
+                if (gameObject is Ship ship)
+                    _shipAvoidanceCell.Remove(ship);
+            }
             _toBeRemoved.Clear();
             _toBeRemovedSet.Clear();
         }
@@ -290,6 +302,46 @@ namespace SpaceDefence
             return _ships;
         }
 
+        public List<Ship> GetShipsNear(Point center, float range)
+        {
+            _nearShips.Clear();
+
+            var left = (int)(center.X - range);
+            var top = (int)(center.Y - range);
+            var right = (int)(center.X + range);
+            var bottom = (int)(center.Y + range);
+
+            var topLeftCell = GetAvoidanceCell(new Point(left, top));
+            var bottomRightCell = GetAvoidanceCell(new Point(right, bottom));
+
+            for (var x = topLeftCell.X; x <= bottomRightCell.X; x++)
+            {
+                for (var y = topLeftCell.Y; y <= bottomRightCell.Y; y++)
+                {
+                    var cell = new Point(x, y);
+                    if (_avoidanceGrid.TryGetValue(cell, out var shipsInCell))
+                        _nearShips.AddRange(shipsInCell);
+                }
+            }
+
+            return _nearShips;
+        }
+
+        public void UpdateShipInAvoidanceGrid(Ship ship)
+        {
+            var newCell = GetAvoidanceCell(ship.Center);
+            if (_shipAvoidanceCell.TryGetValue(ship, out var oldCell))
+            {
+                if (oldCell == newCell)
+                    return;
+
+                if (_avoidanceGrid.TryGetValue(oldCell, out var oldShips))
+                    oldShips.Remove(ship);
+            }
+
+            AddShipToAvoidanceGrid(ship, newCell);
+        }
+
         public List<Ship> GetEnemyShips(CollisionType collisionType)
         {
             var isTeam1 = (collisionType & CollisionType.Team1) != 0;
@@ -306,6 +358,36 @@ namespace SpaceDefence
                 return _team1Ships;
 
             return _team2Ships;
+        }
+
+        private void RebuildAvoidanceGrid()
+        {
+            foreach (var shipsInCell in _avoidanceGrid.Values)
+                shipsInCell.Clear();
+
+            _shipAvoidanceCell.Clear();
+
+            foreach (var ship in _ships)
+                AddShipToAvoidanceGrid(ship, GetAvoidanceCell(ship.Center));
+        }
+
+        private void AddShipToAvoidanceGrid(Ship ship, Point cell)
+        {
+            if (!_avoidanceGrid.TryGetValue(cell, out var shipsInCell))
+            {
+                shipsInCell = new List<Ship>();
+                _avoidanceGrid.Add(cell, shipsInCell);
+            }
+
+            shipsInCell.Add(ship);
+            _shipAvoidanceCell[ship] = cell;
+        }
+
+        private static Point GetAvoidanceCell(Point point)
+        {
+            var x = (int)Math.Floor(point.X / (double)CollisionGridSize);
+            var y = (int)Math.Floor(point.Y / (double)CollisionGridSize);
+            return new Point(x, y);
         }
 
         /// <summary>
